@@ -13,11 +13,11 @@ function BookingModal({ hospital, onClose, onBooked }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Auto-select today so time slots are immediately usable
   const [selectedDate, setSelectedDate] = useState(new Date(today));
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [calYear, setCalYear] = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth());
+  const [booked, setBooked] = useState(false);
 
   const maxDate = new Date(today);
   maxDate.setDate(today.getDate() + 7);
@@ -59,7 +59,15 @@ function BookingModal({ hospital, onClose, onBooked }) {
 
   const handleConfirm = () => {
     if (!selectedDate || !selectedSlot) return;
-    const bookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+
+    // Read existing bookings
+    let bookings = [];
+    try {
+      bookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+    } catch (e) {
+      bookings = [];
+    }
+
     const booking = {
       id: Date.now(),
       hospitalName: hospital['Hospital Name'],
@@ -71,8 +79,17 @@ function BookingModal({ hospital, onClose, onBooked }) {
       date: selectedDate.toDateString(),
       slot: selectedSlot,
     };
+
     bookings.push(booking);
+
+    // Save synchronously
     localStorage.setItem('bookings', JSON.stringify(bookings));
+
+    // Verify it saved
+    const saved = localStorage.getItem('bookings');
+    console.log('Bookings saved to localStorage:', saved);
+
+    setBooked(true);
     onBooked();
     onClose();
   };
@@ -85,9 +102,7 @@ function BookingModal({ hospital, onClose, onBooked }) {
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
-          <div>
-            <h2>Book Appointment</h2>
-          </div>
+          <h2>Book Appointment</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
@@ -147,7 +162,7 @@ function BookingModal({ hospital, onClose, onBooked }) {
 
         <button
           className="confirm-btn"
-          disabled={!selectedDate || !selectedSlot}
+          disabled={!selectedSlot}
           onClick={handleConfirm}
         >
           Book FREE Center Visit
