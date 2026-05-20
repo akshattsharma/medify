@@ -17,7 +17,6 @@ function BookingModal({ hospital, onClose, onBooked }) {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [calYear, setCalYear] = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth());
-  const [booked, setBooked] = useState(false);
 
   const maxDate = new Date(today);
   maxDate.setDate(today.getDate() + 7);
@@ -58,9 +57,8 @@ function BookingModal({ hospital, onClose, onBooked }) {
   };
 
   const handleConfirm = () => {
-    if (!selectedDate || !selectedSlot) return;
+    if (!selectedSlot) return;
 
-    // Read existing bookings
     let bookings = [];
     try {
       bookings = JSON.parse(localStorage.getItem('bookings') || '[]');
@@ -68,28 +66,29 @@ function BookingModal({ hospital, onClose, onBooked }) {
       bookings = [];
     }
 
+    // Store with BOTH 'hospitalName' and 'Hospital Name' keys to be safe
     const booking = {
       id: Date.now(),
       hospitalName: hospital['Hospital Name'],
+      'Hospital Name': hospital['Hospital Name'],
       address: hospital['Address'],
+      'Address': hospital['Address'],
       city: hospital['City'],
+      'City': hospital['City'],
       state: hospital['State'],
+      'State': hospital['State'],
       zip: hospital['ZIP Code'],
+      'ZIP Code': hospital['ZIP Code'],
       rating: hospital['Overall Rating'],
-      date: selectedDate.toDateString(),
+      'Overall Rating': hospital['Overall Rating'],
+      date: selectedDate ? selectedDate.toDateString() : today.toDateString(),
       slot: selectedSlot,
     };
 
     bookings.push(booking);
-
-    // Save synchronously
     localStorage.setItem('bookings', JSON.stringify(bookings));
+    console.log('Saved bookings:', localStorage.getItem('bookings'));
 
-    // Verify it saved
-    const saved = localStorage.getItem('bookings');
-    console.log('Bookings saved to localStorage:', saved);
-
-    setBooked(true);
     onBooked();
     onClose();
   };
@@ -106,7 +105,6 @@ function BookingModal({ hospital, onClose, onBooked }) {
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
-        {/* Calendar */}
         <div className="modal-section">
           <p>Today</p>
           <div className="calendar">
@@ -132,7 +130,6 @@ function BookingModal({ hospital, onClose, onBooked }) {
           </div>
         </div>
 
-        {/* Time Slots — always visible */}
         <div className="modal-section">
           <div className="time-section">
             <p>Morning</p>

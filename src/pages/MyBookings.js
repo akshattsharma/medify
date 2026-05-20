@@ -5,9 +5,23 @@ function MyBookings() {
   const [bookings, setBookings] = useState([]);
 
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem('bookings') || '[]');
-    setBookings(stored);
+    const readBookings = () => {
+      try {
+        const stored = JSON.parse(localStorage.getItem('bookings') || '[]');
+        setBookings(stored);
+      } catch (e) {
+        console.error('Error reading bookings:', e);
+        setBookings([]);
+      }
+    };
+    readBookings();
+    window.addEventListener('focus', readBookings);
+    return () => window.removeEventListener('focus', readBookings);
   }, []);
+
+  const getHospitalName = (b) => {
+    return b.hospitalName || b['Hospital Name'] || 'Unknown Hospital';
+  };
 
   const handleDelete = (id) => {
     const updated = bookings.filter(b => b.id !== id);
@@ -30,26 +44,22 @@ function MyBookings() {
             <p>You have no bookings yet. Search for medical centers to book an appointment.</p>
           </div>
         ) : (
-          bookings.map(b => (
-            <div className="booking-card" key={b.id}>
-              <h3>{b.hospitalName}</h3>
+          bookings.map((b, i) => (
+            <div className="booking-card" key={b.id || i}>
+              <h3>{getHospitalName(b)}</h3>
               <div className="booking-detail">
-                <span>📍 {b.address}, {b.city}, {b.state} {b.zip}</span>
+                <span>📍 {b.address || b['Address']}, {b.city || b['City']}, {b.state || b['State']} {b.zip || b['ZIP Code']}</span>
                 <span>📅 {b.date}</span>
                 <span>🕐 {b.slot}</span>
-                {b.rating && b.rating !== 'Not Available' && (
-                  <span>⭐ Rating: {b.rating}</span>
-                )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
                 <span className="badge">✓ Confirmed</span>
                 <button
-                  onClick={() => handleDelete(b.id)}
+                  onClick={() => handleDelete(b.id || i)}
                   style={{
                     background: 'none', border: '1px solid #e2e8f0',
                     borderRadius: 6, padding: '4px 12px',
-                    fontSize: '0.8rem', cursor: 'pointer',
-                    color: '#718096'
+                    fontSize: '0.8rem', cursor: 'pointer', color: '#718096'
                   }}
                 >
                   Cancel
