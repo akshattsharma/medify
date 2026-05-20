@@ -1,66 +1,160 @@
-import React, { useState, useEffect } from 'react';
-import Navbar from '../components/Navbar';
+import React, { useState } from 'react';
 
-function MyBookings() {
-  const [bookings, setBookings] = useState([]);
+const SLOTS = {
+  Morning: ['9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM'],
+  Afternoon: ['12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '2:30 PM', '3:00 PM'],
+  Evening: ['4:00 PM', '4:30 PM', '5:00 PM', '5:30 PM', '6:00 PM'],
+};
 
-  useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem('bookings') || '[]');
-    setBookings(stored);
-  }, []);
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-  const handleDelete = (id) => {
-    const updated = bookings.filter(b => b.id !== id);
-    setBookings(updated);
-    localStorage.setItem('bookings', JSON.stringify(updated));
+function BookingModal({ hospital, onClose, onBooked }) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Auto-select today so time slots are immediately usable
+  const [selectedDate, setSelectedDate] = useState(new Date(today));
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [calYear, setCalYear] = useState(today.getFullYear());
+  const [calMonth, setCalMonth] = useState(today.getMonth());
+
+  const maxDate = new Date(today);
+  maxDate.setDate(today.getDate() + 7);
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+
+  const prevMonth = () => {
+    if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1); }
+    else setCalMonth(m => m - 1);
   };
 
+  const nextMonth = () => {
+    if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1); }
+    else setCalMonth(m => m + 1);
+  };
+
+  const isDisabled = (day) => {
+    const d = new Date(calYear, calMonth, day);
+    return d < today || d > maxDate;
+  };
+
+  const isSelected = (day) => {
+    if (!selectedDate) return false;
+    const d = new Date(calYear, calMonth, day);
+    return d.toDateString() === selectedDate.toDateString();
+  };
+
+  const isToday = (day) => {
+    const d = new Date(calYear, calMonth, day);
+    return d.toDateString() === today.toDateString();
+  };
+
+  const handleDayClick = (day) => {
+    if (isDisabled(day)) return;
+    setSelectedDate(new Date(calYear, calMonth, day));
+    setSelectedSlot(null);
+  };
+
+  const handleConfirm = () => {
+    if (!selectedDate || !selectedSlot) return;
+    const bookings = JSON.parse(localStorage.getItem('bookings') || '[]');
+    const booking = {
+      id: Date.now(),
+      hospitalName: hospital['Hospital Name'],
+      address: hospital['Address'],
+      city: hospital['City'],
+      state: hospital['State'],
+      zip: hospital['ZIP Code'],
+      rating: hospital['Overall Rating'],
+      date: selectedDate.toDateString(),
+      slot: selectedSlot,
+    };
+    bookings.push(booking);
+    localStorage.setItem('bookings', JSON.stringify(bookings));
+    onBooked();
+    onClose();
+  };
+
+  const cells = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
   return (
-    <div>
-      <Navbar />
-      <div className="page-container">
-        <div className="results-header">
-          <h1>My Bookings</h1>
-          <p>Your scheduled medical center appointments</p>
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <div>
+            <h2>Book Appointment</h2>
+          </div>
+          <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
-        {bookings.length === 0 ? (
-          <div className="bookings-empty">
-            <div className="icon">📋</div>
-            <p>You have no bookings yet. Search for medical centers to book an appointment.</p>
-          </div>
-        ) : (
-          bookings.map(b => (
-            <div className="booking-card" key={b.id}>
-              <h3>{b.hospitalName}</h3>
-              <div className="booking-detail">
-                <span>📍 {b.address}, {b.city}, {b.state} {b.zip}</span>
-                <span>📅 {b.date}</span>
-                <span>🕐 {b.slot}</span>
-                {b.rating && b.rating !== 'Not Available' && (
-                  <span>⭐ Rating: {b.rating}</span>
-                )}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
-                <span className="badge">✓ Confirmed</span>
-                <button
-                  onClick={() => handleDelete(b.id)}
-                  style={{
-                    background: 'none', border: '1px solid #e2e8f0',
-                    borderRadius: 6, padding: '4px 12px',
-                    fontSize: '0.8rem', cursor: 'pointer',
-                    color: '#718096'
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
+        {/* Calendar */}
+        <div className="modal-section">
+          <p>Today</p>
+          <div className="calendar">
+            <div className="calendar-header">
+              <button className="cal-nav" onClick={prevMonth}>‹</button>
+              <span>{MONTH_NAMES[calMonth]} {calYear}</span>
+              <button className="cal-nav" onClick={nextMonth}>›</button>
             </div>
-          ))
-        )}
+            <div className="calendar-grid">
+              {DAY_NAMES.map(d => (
+                <div key={d} className="cal-day-name">{d}</div>
+              ))}
+              {cells.map((day, i) => (
+                <div
+                  key={i}
+                  className={`cal-day ${!day ? 'empty' : ''} ${day && isDisabled(day) ? 'disabled' : ''} ${day && isSelected(day) ? 'selected' : ''} ${day && isToday(day) ? 'today' : ''}`}
+                  onClick={() => day && handleDayClick(day)}
+                >
+                  {day || ''}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Time Slots — always visible */}
+        <div className="modal-section">
+          <div className="time-section">
+            <p>Morning</p>
+            <div className="time-slots">
+              {SLOTS.Morning.map(t => (
+                <button key={t} className={`time-slot ${selectedSlot === t ? 'selected' : ''}`} onClick={() => setSelectedSlot(t)}>{t}</button>
+              ))}
+            </div>
+          </div>
+          <div className="time-section">
+            <p>Afternoon</p>
+            <div className="time-slots">
+              {SLOTS.Afternoon.map(t => (
+                <button key={t} className={`time-slot ${selectedSlot === t ? 'selected' : ''}`} onClick={() => setSelectedSlot(t)}>{t}</button>
+              ))}
+            </div>
+          </div>
+          <div className="time-section">
+            <p>Evening</p>
+            <div className="time-slots">
+              {SLOTS.Evening.map(t => (
+                <button key={t} className={`time-slot ${selectedSlot === t ? 'selected' : ''}`} onClick={() => setSelectedSlot(t)}>{t}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <button
+          className="confirm-btn"
+          disabled={!selectedDate || !selectedSlot}
+          onClick={handleConfirm}
+        >
+          Book FREE Center Visit
+        </button>
       </div>
     </div>
   );
 }
 
-export default MyBookings;
+export default BookingModal;
