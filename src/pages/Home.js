@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 
@@ -9,6 +9,12 @@ function Home() {
   const [selectedCity, setSelectedCity] = useState('');
   const [loadingStates, setLoadingStates] = useState(true);
   const [loadingCities, setLoadingCities] = useState(false);
+  const [showStateList, setShowStateList] = useState(false);
+  const [showCityList, setShowCityList] = useState(false);
+  const [stateSearch, setStateSearch] = useState('');
+  const [citySearch, setCitySearch] = useState('');
+  const stateRef = useRef(null);
+  const cityRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,11 +33,36 @@ function Home() {
       .catch(err => { console.error('Error fetching cities:', err); setLoadingCities(false); });
   }, [selectedState]);
 
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (stateRef.current && !stateRef.current.contains(e.target)) setShowStateList(false);
+      if (cityRef.current && !cityRef.current.contains(e.target)) setShowCityList(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleSelectState = (s) => {
+    setSelectedState(s);
+    setStateSearch('');
+    setShowStateList(false);
+  };
+
+  const handleSelectCity = (c) => {
+    setSelectedCity(c);
+    setCitySearch('');
+    setShowCityList(false);
+  };
+
   const handleSearch = (e) => {
     e.preventDefault();
     if (!selectedState || !selectedCity) return;
     navigate(`/search?state=${encodeURIComponent(selectedState)}&city=${encodeURIComponent(selectedCity)}`);
   };
+
+  const filteredStates = states.filter(s => s.toLowerCase().includes(stateSearch.toLowerCase()));
+  const filteredCities = cities.filter(c => c.toLowerCase().includes(citySearch.toLowerCase()));
 
   return (
     <div>
@@ -45,35 +76,66 @@ function Home() {
           <h2>Find Medical Centers Near You</h2>
           <form onSubmit={handleSearch}>
             <div className="search-row">
-              <div className="form-group">
+
+              {/* STATE DROPDOWN */}
+              <div className="form-group" ref={stateRef}>
                 <label>State</label>
-                <div id="state">
-                  <select
-                    value={selectedState}
-                    onChange={e => setSelectedState(e.target.value)}
-                    disabled={loadingStates}
+                <div id="state" className="custom-dropdown">
+                  <div
+                    className="dropdown-trigger"
+                    onClick={() => { setShowStateList(v => !v); setShowCityList(false); }}
                   >
-                    <option value="">{loadingStates ? 'Loading...' : 'Select State'}</option>
-                    {states.map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
+                    <span>{selectedState || (loadingStates ? 'Loading...' : 'Select State')}</span>
+                    <span className="dropdown-arrow">▾</span>
+                  </div>
+                  {showStateList && (
+                    <div className="dropdown-list-wrap">
+                      <input
+                        type="text"
+                        className="dropdown-search"
+                        placeholder="Search state..."
+                        value={stateSearch}
+                        onChange={e => setStateSearch(e.target.value)}
+                        autoFocus
+                      />
+                      <ul className="dropdown-list">
+                        {filteredStates.map(s => (
+                          <li key={s} onClick={() => handleSelectState(s)}>{s}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="form-group">
+              {/* CITY DROPDOWN */}
+              <div className="form-group" ref={cityRef}>
                 <label>City</label>
-                <div id="city">
-                  <select
-                    value={selectedCity}
-                    onChange={e => setSelectedCity(e.target.value)}
-                    disabled={!selectedState || loadingCities}
+                <div id="city" className="custom-dropdown">
+                  <div
+                    className={`dropdown-trigger ${!selectedState ? 'disabled' : ''}`}
+                    onClick={() => { if (!selectedState || loadingCities) return; setShowCityList(v => !v); setShowStateList(false); }}
                   >
-                    <option value="">{loadingCities ? 'Loading...' : 'Select City'}</option>
-                    {cities.map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
+                    <span>{selectedCity || (loadingCities ? 'Loading...' : 'Select City')}</span>
+                    <span className="dropdown-arrow">▾</span>
+                  </div>
+                  {showCityList && (
+                    <div className="dropdown-list-wrap">
+                      <input
+                        type="text"
+                        className="dropdown-search"
+                        placeholder="Search city..."
+                        value={citySearch}
+                        onChange={e => setCitySearch(e.target.value)}
+                        autoFocus
+                      />
+                      <ul className="dropdown-list">
+                        {filteredCities.map(c => (
+                          <li key={c} onClick={() => handleSelectCity(c)}>{c}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </div>
 
