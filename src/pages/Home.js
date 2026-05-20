@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 
@@ -9,12 +9,6 @@ function Home() {
   const [selectedCity, setSelectedCity] = useState('');
   const [loadingStates, setLoadingStates] = useState(true);
   const [loadingCities, setLoadingCities] = useState(false);
-  const [showStateList, setShowStateList] = useState(false);
-  const [showCityList, setShowCityList] = useState(false);
-  const [stateSearch, setStateSearch] = useState('');
-  const [citySearch, setCitySearch] = useState('');
-  const stateRef = useRef(null);
-  const cityRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -33,36 +27,11 @@ function Home() {
       .catch(err => { console.error('Error fetching cities:', err); setLoadingCities(false); });
   }, [selectedState]);
 
-  // Close dropdowns on outside click
-  useEffect(() => {
-    const handler = (e) => {
-      if (stateRef.current && !stateRef.current.contains(e.target)) setShowStateList(false);
-      if (cityRef.current && !cityRef.current.contains(e.target)) setShowCityList(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  const handleSelectState = (s) => {
-    setSelectedState(s);
-    setStateSearch('');
-    setShowStateList(false);
-  };
-
-  const handleSelectCity = (c) => {
-    setSelectedCity(c);
-    setCitySearch('');
-    setShowCityList(false);
-  };
-
   const handleSearch = (e) => {
     e.preventDefault();
     if (!selectedState || !selectedCity) return;
     navigate(`/search?state=${encodeURIComponent(selectedState)}&city=${encodeURIComponent(selectedCity)}`);
   };
-
-  const filteredStates = states.filter(s => s.toLowerCase().includes(stateSearch.toLowerCase()));
-  const filteredCities = cities.filter(c => c.toLowerCase().includes(citySearch.toLowerCase()));
 
   return (
     <div>
@@ -77,64 +46,46 @@ function Home() {
           <form onSubmit={handleSearch}>
             <div className="search-row">
 
-              {/* STATE DROPDOWN */}
-              <div className="form-group" ref={stateRef}>
+              {/* STATE — always-visible scrollable list */}
+              <div className="form-group">
                 <label>State</label>
-                <div id="state" className="custom-dropdown">
-                  <div
-                    className="dropdown-trigger"
-                    onClick={() => { setShowStateList(v => !v); setShowCityList(false); }}
-                  >
-                    <span>{selectedState || (loadingStates ? 'Loading...' : 'Select State')}</span>
-                    <span className="dropdown-arrow">▾</span>
-                  </div>
-                  {showStateList && (
-                    <div className="dropdown-list-wrap">
-                      <input
-                        type="text"
-                        className="dropdown-search"
-                        placeholder="Search state..."
-                        value={stateSearch}
-                        onChange={e => setStateSearch(e.target.value)}
-                        autoFocus
-                      />
-                      <ul className="dropdown-list">
-                        {filteredStates.map(s => (
-                          <li key={s} onClick={() => handleSelectState(s)}>{s}</li>
-                        ))}
-                      </ul>
-                    </div>
+                <div id="state" className="list-dropdown">
+                  {loadingStates ? (
+                    <p className="list-loading">Loading states...</p>
+                  ) : (
+                    <ul className="dropdown-list">
+                      {states.map(s => (
+                        <li
+                          key={s}
+                          className={selectedState === s ? 'selected' : ''}
+                          onClick={() => setSelectedState(s)}
+                        >
+                          {s}
+                        </li>
+                      ))}
+                    </ul>
                   )}
                 </div>
               </div>
 
-              {/* CITY DROPDOWN */}
-              <div className="form-group" ref={cityRef}>
+              {/* CITY — always-visible scrollable list */}
+              <div className="form-group">
                 <label>City</label>
-                <div id="city" className="custom-dropdown">
-                  <div
-                    className={`dropdown-trigger ${!selectedState ? 'disabled' : ''}`}
-                    onClick={() => { if (!selectedState || loadingCities) return; setShowCityList(v => !v); setShowStateList(false); }}
-                  >
-                    <span>{selectedCity || (loadingCities ? 'Loading...' : 'Select City')}</span>
-                    <span className="dropdown-arrow">▾</span>
-                  </div>
-                  {showCityList && (
-                    <div className="dropdown-list-wrap">
-                      <input
-                        type="text"
-                        className="dropdown-search"
-                        placeholder="Search city..."
-                        value={citySearch}
-                        onChange={e => setCitySearch(e.target.value)}
-                        autoFocus
-                      />
-                      <ul className="dropdown-list">
-                        {filteredCities.map(c => (
-                          <li key={c} onClick={() => handleSelectCity(c)}>{c}</li>
-                        ))}
-                      </ul>
-                    </div>
+                <div id="city" className="list-dropdown">
+                  {loadingCities ? (
+                    <p className="list-loading">Loading cities...</p>
+                  ) : (
+                    <ul className="dropdown-list">
+                      {cities.map(c => (
+                        <li
+                          key={c}
+                          className={selectedCity === c ? 'selected' : ''}
+                          onClick={() => setSelectedCity(c)}
+                        >
+                          {c}
+                        </li>
+                      ))}
+                    </ul>
                   )}
                 </div>
               </div>
